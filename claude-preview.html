@@ -1,0 +1,890 @@
+<title>Doorline</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one-screen field app. Sticky top bar, scrolling view, bottom tab bar with a center "Log door" button. Cards only where they group a task. */
+:root{
+  --bg:#F3F4F8; --surface:#FFFFFF; --surface-2:#ECEEF4; --ink:#141726; --muted:#5C6277; --line:#DCDFE8;
+  --accent:#3438D0; --accent-soft:#E6E7FB; --accent-ink:#FFFFFF;
+  --o-nh:#8A90A2; --o-ni:#D2483F; --o-cb:#D98A0B; --o-int:#2585CF; --o-sale:#16935A; --o-dnk:#6A3796;
+  --warn-bg:#FFF4E0; --bad-bg:#FDECEA;
+  --shadow:0 1px 2px rgba(20,23,38,.06),0 4px 16px rgba(20,23,38,.06);
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --r:14px; --r-sm:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C0E16; --surface:#151826; --surface-2:#1D2133; --ink:#ECEEF7; --muted:#9AA0B6; --line:#2A2F44;
+  --accent:#8E92FF; --accent-soft:#25285A; --accent-ink:#0C0E16;
+  --o-nh:#7D8398; --o-ni:#F06B62; --o-cb:#F2A93B; --o-int:#55A9EC; --o-sale:#3CC283; --o-dnk:#A77BD6;
+  --warn-bg:#3A2C10; --bad-bg:#3B1A18; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C0E16; --surface:#151826; --surface-2:#1D2133; --ink:#ECEEF7; --muted:#9AA0B6; --line:#2A2F44;
+  --accent:#8E92FF; --accent-soft:#25285A; --accent-ink:#0C0E16;
+  --o-nh:#7D8398; --o-ni:#F06B62; --o-cb:#F2A93B; --o-int:#55A9EC; --o-sale:#3CC283; --o-dnk:#A77BD6;
+  --warn-bg:#3A2C10; --bad-bg:#3B1A18; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--f-display);font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.mode{margin-left:auto;font-size:12px;font-weight:600;padding:5px 10px;border-radius:99px;background:var(--surface-2);color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.mode i{width:7px;height:7px;border-radius:50%;background:var(--o-nh)}
+.mode.cloud i{background:var(--o-sale)} .mode.sample i{background:var(--o-cb)}
+.icon-btn{border:0;background:transparent;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--ink)}
+.icon-btn:hover{background:var(--surface-2)}
+
+main{padding-block:16px 120px}
+.view{display:flex;flex-direction:column;gap:16px}
+
+/* bottom nav */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tabs-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;padding:6px 8px 8px}
+.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--muted);padding:6px 0;border-radius:10px;text-decoration:none}
+.tab svg{width:22px;height:22px}
+.tab[aria-current="page"]{color:var(--accent)}
+.fab{justify-self:center;margin-top:-26px;width:62px;height:62px;border-radius:20px;border:0;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;box-shadow:0 6px 20px color-mix(in srgb,var(--accent) 45%,transparent);transition:transform .15s}
+.fab:active{transform:scale(.94)}
+.fab svg{width:28px;height:28px}
+.fab-label{font-size:11px;font-weight:700;color:var(--accent);text-align:center;margin-top:4px}
+
+/* generic */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);min-width:0}
+.card-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card-h h2{font-size:17px}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.link{border:0;background:none;color:var(--accent);font-weight:600;font-size:13.5px;padding:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px 3px 7px;border-radius:99px;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c);white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:9px 14px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--o-ni)}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:9px}
+.btn svg{width:16px;height:16px}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:11px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--warn-bg);border-radius:var(--r);padding:12px 14px;font-size:14px}
+.banner b{font-weight:700}
+.banner .btn{margin-left:auto}
+.empty{text-align:center;padding:24px 8px;color:var(--muted);font-size:14px}
+
+/* today */
+.hello h1{font-size:clamp(26px,6vw,34px);font-weight:800}
+.hello p{margin:2px 0 0;color:var(--muted)}
+.goal{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.ring{position:relative;width:132px;height:132px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .c{position:absolute;inset:0;display:grid;place-items:center;text-align:center;align-content:center}
+.ring .big{font-family:var(--f-display);font-weight:800;font-size:36px;line-height:1}
+.ring .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.bars{display:flex;flex-direction:column;gap:12px;min-width:0}
+.gbar-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.gbar-top b{font-weight:600}
+.track{height:9px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.track span{display:block;height:100%;border-radius:99px;background:var(--c,var(--accent));transition:width .5s}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
+.kpi .v{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.1;margin-top:4px}
+.kpi .d{font-size:12px;margin-top:2px;color:var(--muted)}
+.up{color:var(--o-sale)} .down{color:var(--o-ni)}
+.funnel{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.fstep{position:relative}
+.fstep .fb{height:54px;border-radius:8px;background:var(--surface-2);display:flex;align-items:flex-end;overflow:hidden}
+.fstep .fb span{display:block;width:100%;background:var(--accent);opacity:.85;border-radius:8px 8px 0 0}
+.fstep .fl{font-size:12px;color:var(--muted);margin-top:6px}
+.fstep .fv{font-weight:700;font-family:var(--f-mono);font-size:15px}
+.fstep .fr{font-size:11.5px;color:var(--muted)}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:10px;font-family:var(--f-mono)}
+.feed{display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);min-width:0}
+.row:first-child{border-top:0}
+.row .main{flex:1;min-width:0}
+.row .t1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t2{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .when{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.rowbtn{all:unset;display:flex;align-items:center;gap:12px;width:100%;cursor:pointer}
+
+/* streets */
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:4px;background:var(--c)}
+.legend i.open{background:none;border:1.5px dashed var(--line)}
+.street{display:flex;flex-direction:column;gap:12px}
+.street-h{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.street-h h3{font-size:18px}
+.street-stats{display:flex;gap:14px;font-size:13px;color:var(--muted);flex-wrap:wrap;margin-top:2px}
+.street-stats b{color:var(--ink);font-family:var(--f-mono);font-weight:700}
+.street-h .btn{margin-left:auto}
+.side{display:flex;flex-direction:column;gap:6px}
+.side-l{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.road{height:6px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--line) 0 14px,transparent 14px 24px)}
+.houses{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.house{flex:none;width:44px;height:40px;border-radius:9px;border:0;background:var(--c);color:#fff;font-family:var(--f-mono);font-size:11.5px;font-weight:700;display:grid;place-items:center;position:relative}
+.house.open{background:transparent;border:1.5px dashed var(--line);color:var(--muted);font-weight:500}
+.house.due::after{content:"";position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--o-cb);border:2px solid var(--surface)}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.search{flex:1;min-width:180px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:0 12px}
+.search input{border:0;background:none;padding:10px 0;width:100%;outline:none}
+.search svg{width:17px;height:17px;color:var(--muted);flex:none}
+
+/* leads */
+.group-h{display:flex;align-items:center;gap:8px;margin:4px 0 8px}
+.group-h .n{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border-radius:99px;padding:1px 8px;color:var(--muted)}
+.lead{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-top:1px solid var(--line)}
+.lead:first-of-type{border-top:0;padding-top:4px}
+.lead-top{display:flex;gap:10px;align-items:flex-start}
+.lead-top .main{flex:1;min-width:0}
+.lead-name{font-weight:700;font-size:15.5px}
+.lead-addr{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.lead-due{font-size:12.5px;font-weight:600;white-space:nowrap;padding:3px 8px;border-radius:8px;background:var(--surface-2)}
+.lead-due.over{background:var(--bad-bg);color:var(--o-ni)}
+.lead-due.today{background:var(--warn-bg);color:var(--o-cb)}
+.lead-note{font-size:13.5px;background:var(--surface-2);border-radius:9px;padding:8px 10px;overflow-wrap:anywhere}
+.lead-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.lead-meta .mono{user-select:all;color:var(--ink)}
+.lead-acts{display:flex;gap:8px;flex-wrap:wrap}
+
+/* team */
+.board{display:flex;flex-direction:column;gap:4px}
+.rank{display:grid;grid-template-columns:28px 36px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px}
+.rank.me{background:var(--accent-soft)}
+.rank .pos{font-family:var(--f-mono);font-weight:700;color:var(--muted);text-align:center}
+.rank .pos.p1{color:var(--o-cb)}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;background:var(--c);overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.rank .nm{font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank .bar{height:6px;border-radius:3px;background:var(--surface-2);margin-top:5px;overflow:hidden}
+.rank .bar span{display:block;height:100%;background:var(--accent);border-radius:3px}
+.rank .val{font-family:var(--f-mono);font-weight:700;font-size:15px;text-align:right}
+.rank .val small{display:block;font-size:11px;font-weight:500;color:var(--muted)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(8,10,20,.45);z-index:40;opacity:0;transition:opacity .2s}
+.scrim.on{opacity:1}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;max-height:calc(100% - 24px - env(safe-area-inset-top,0px));display:flex;flex-direction:column;background:var(--surface);border-radius:22px 22px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.2);transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);max-width:640px;margin:0 auto}
+.sheet.on{transform:none}
+.sheet-h{display:flex;align-items:center;gap:10px;padding:14px max(18px,env(safe-area-inset-right,0px)) 10px max(18px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.sheet-h h2{font-size:20px;flex:1}
+.sheet-b{overflow-y:auto;padding:16px max(18px,env(safe-area-inset-right,0px)) 16px max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+.sheet-f{display:flex;gap:10px;padding:12px max(18px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));border-top:1px solid var(--line)}
+.sheet-f .btn{flex:1;padding:13px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,.flabel{font-size:12.5px;font-weight:600;color:var(--muted)}
+.inp{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:11px;padding:11px 12px;outline:none}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.inp{resize:vertical;min-height:70px}
+.addr{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.stepper{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:11px;background:var(--bg);overflow:hidden}
+.stepper button{border:0;background:none;width:38px;font-size:18px;font-weight:600;color:var(--muted)}
+.stepper button:hover{background:var(--surface-2)}
+.stepper input{width:72px;border:0;background:none;text-align:center;font-family:var(--f-mono);font-weight:700;font-size:20px;outline:none;padding:8px 0}
+.outs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.out{border:1.5px solid var(--line);background:var(--surface);border-radius:13px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;transition:all .12s}
+.out svg{width:24px;height:24px;color:var(--c)}
+.out[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.out[aria-pressed="true"] svg{color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:13px;font-weight:600}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.prior{display:flex;gap:10px;align-items:center;font-size:13px;background:var(--surface-2);border-radius:11px;padding:10px 12px}
+.err{color:var(--o-ni);font-size:13px;font-weight:600}
+.hist{display:flex;flex-direction:column;gap:0}
+.confirm{display:flex;flex-direction:column;gap:10px;background:var(--bad-bg);border-radius:11px;padding:12px}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:60;opacity:0;transition:all .2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:640px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .goal{grid-template-columns:1fr;justify-items:center}
+  .goal .bars{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/></svg></span>Doorline</div>
+    <span class="mode" id="mode"><i></i><span>On this device</span></span>
+    <button class="icon-btn" data-act="settings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+  </div>
+</header>
+
+<main><div class="wrap"><div class="view" id="view"></div></div></main>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="tabs-in">
+    <a class="tab" href="#today" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Today</a>
+    <a class="tab" href="#streets" data-tab="streets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Streets</a>
+    <div><button class="fab" data-act="log" aria-label="Log a door"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button><div class="fab-label">Log door</div></div>
+    <a class="tab" href="#leads" data-tab="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Follow-ups</a>
+    <a class="tab" href="#team" data-tab="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Team</a>
+  </div>
+</nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden></section>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+"use strict";
+/* ---------- constants ---------- */
+const OUT = {
+  nh:  {label:"Not home",       c:"var(--o-nh)",  icon:'<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17M3 21h18"/><path d="M10 10h4"/>'},
+  ni:  {label:"Not interested", c:"var(--o-ni)",  icon:'<circle cx="12" cy="12" r="9"/><path d="M8 8l8 8"/>'},
+  cb:  {label:"Callback",       c:"var(--o-cb)",  icon:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'},
+  int: {label:"Interested",     c:"var(--o-int)", icon:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'},
+  sale:{label:"Sale",           c:"var(--o-sale)",icon:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'},
+  dnk: {label:"Do not knock",   c:"var(--o-dnk)", icon:'<path d="M12 3 3 7v6c0 4.5 3.8 7.7 9 8 5.2-.3 9-3.5 9-8V7z"/><path d="M9 12h6"/>'}
+};
+const OUT_KEYS = ["nh","ni","cb","int","sale","dnk"];
+const isContact = o => o==="ni"||o==="cb"||o==="int"||o==="sale";
+const isPitch = o => o==="cb"||o==="int"||o==="sale";
+const AV_COLORS = ["#3438D0","#16935A","#D2483F","#2585CF","#9A5BD0","#C47A0B","#0E8A8A"];
+const DAY = 864e5;
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const sod = (t=Date.now()) => { const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+const sow = (t=Date.now()) => { const d=new Date(sod(t)); const wd=(d.getDay()+6)%7; return d.getTime()-wd*DAY; };
+const som = (t=Date.now()) => { const d=new Date(t); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); };
+const money = n => new Intl.NumberFormat(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n||0);
+const fmtTime = t => new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+function relDay(t){
+  const d0 = sod(), d = sod(t), diff = Math.round((d-d0)/DAY);
+  if (diff===0) return "Today " + fmtTime(t);
+  if (diff===-1) return "Yesterday " + fmtTime(t);
+  if (diff===1) return "Tomorrow " + fmtTime(t);
+  if (Math.abs(diff)<7) return new Date(t).toLocaleDateString([], {weekday:"short"}) + " " + fmtTime(t);
+  return new Date(t).toLocaleDateString([], {month:"short", day:"numeric"});
+}
+function ago(t){
+  const m = Math.round((Date.now()-t)/6e4);
+  if (m<1) return "just now"; if (m<60) return m+"m ago";
+  const h = Math.round(m/60); if (h<24) return h+"h ago";
+  const d = Math.round(h/24); return d+"d ago";
+}
+const addrKey = (street,num) => street.trim().toLowerCase().replace(/\s+/g," ") + "#" + num;
+const addrLabel = k => k.num + " " + k.street;
+const icon = (paths, size=24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const pill = o => `<span class="pill" style="--c:${OUT[o].c}">${OUT[o].label}</span>`;
+const LS = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+let toastTimer;
+function toast(msg){ const el=$("#toast"); el.textContent=msg; el.classList.add("on"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove("on"),2600); }
+
+/* ---------- state ---------- */
+const DEFAULT_SETTINGS = { name:"", goalDoors:60, goalTalks:20, goalSales:3,
+  products:[{name:"Quarterly plan",price:420},{name:"Annual plan",price:1200},{name:"One-time service",price:180}] };
+const S = {
+  settings: Object.assign({}, DEFAULT_SETTINGS, LS.get("d2d.settings", {})),
+  real: LS.get("d2d.knocks", []),
+  sample: null,          // generated sample knocks
+  mode: "local",         // local | cloud
+  me: "me",
+  db: null, user: null, canWrite: true,
+  names: {}, avatars: {},
+  ui: { view:"today", leadsTab:"due", leadsFilter:"all", q:"", teamPeriod:"week", teamMetric:"sales", streetQ:"" },
+  loadingCloud: false
+};
+const usingSample = () => S.real.length === 0;
+const knocks = () => usingSample() ? S.sample : S.real;
+const mine = () => knocks().filter(k => k.rep === S.me);
+
+/* ---------- sample data (clearly labeled, never saved) ---------- */
+function rng(seed){ return () => { seed = (seed*1664525 + 1013904223) % 4294967296; return seed/4294967296; }; }
+function buildSample(){
+  const R = rng(20261116);
+  const reps = [{id:S.me, name:null},{id:"s-jordan",name:"Jordan Pike"},{id:"s-alexis",name:"Alexis Romero"},{id:"s-sam",name:"Sam Tran"},{id:"s-priya",name:"Priya Kapoor"}];
+  reps.forEach(r => { if (r.name) S.names[r.id] = r.name; });
+  const streets = ["Maple Ave","Birch Ln","Cedar Ct","Oakridge Dr","Willow St","Aspen Way","Harbor View Rd","Juniper Pl","Sycamore Blvd","Larkspur Ln"];
+  const first = ["Dana","Chris","Morgan","Taylor","Robin","Casey","Jamie","Avery","Riley","Quinn","Drew","Parker","Reese","Skyler","Hayden","Rowan"];
+  const last = ["Alvarez","Brooks","Chen","Dawson","Ellis","Foster","Garcia","Hughes","Ibarra","Jensen","Kim","Lopez","Moreno","Nguyen","Owens","Patel"];
+  const notes = ["Asked to come back when spouse is home","Has a competitor contract ending next month","Wants pricing for the annual plan","Dog in yard, use side gate","Very friendly, interested in a quote","Works nights, best after 4pm","Neighbor at #{n} referred us"];
+  const pick = a => a[Math.floor(R()*a.length)];
+  const prods = S.settings.products;
+  const out = []; const now = Date.now(); const today = sod(now);
+  for (let back=13; back>=0; back--){
+    const day = today - back*DAY;
+    if (new Date(day).getDay()===0) continue;
+    reps.forEach((rep, ri) => {
+      let start = day + 10*36e5, end = day + 19.5*36e5;
+      if (back===0){ end = Math.min(end, now - 5*6e4); if (end - start < 3*36e5) start = Math.max(day, end - 6*36e5); }
+      if (end <= start) return;
+      const skill = [1, .8, 1.15, .7, .95][ri];
+      let n = Math.round((32 + R()*28) * (back===0 ? (end-start)/(9.5*36e5) : 1));
+      let street = streets[(back*3 + ri*2) % streets.length];
+      let num = 100 + Math.floor(R()*8)*2 + (ri%2);
+      for (let i=0;i<n;i++){
+        if (i>0 && i % 22 === 0){ street = streets[(back*3 + ri*2 + i) % streets.length]; num = 100 + (ri%2) + Math.floor(R()*10)*2; }
+        const ts = Math.round(start + (end-start)*(i+R()*.8)/n);
+        const r = R();
+        const o = r<.44?"nh": r<.69?"ni": r<.78?"cb": r<.78+.09*skill?"int": r<.82+.08*skill?"sale": r<.97?"nh":"dnk";
+        const k = {id:"x"+out.length, ts, rep:rep.id, street, num, outcome:o, notes:"", name:"", phone:"", email:"", followAt:null, followDone:false, product:"", amount:0, sample:true};
+        if (isPitch(o)){
+          k.name = pick(first)+" "+pick(last);
+          k.phone = "(555) 01" + String(Math.floor(R()*90)+10);
+          if (R()<.6) k.notes = pick(notes).replace("{n}", num+2);
+        }
+        if (o==="cb"||o==="int"){
+          const f = sod(ts) + (1+Math.floor(R()*4))*DAY + [10,14,17][Math.floor(R()*3)]*36e5;
+          k.followAt = f; k.followDone = f < now && R()<.55;
+        }
+        if (o==="sale"){ const p = pick(prods); k.product = p.name; k.amount = p.price; }
+        out.push(k); num += 2;
+      }
+    });
+  }
+  // make sure a couple of follow-ups are due today for the demo
+  out.filter(k => k.rep===S.me && k.followAt && !k.followDone).slice(-2).forEach((k,i) => k.followAt = today + (15+i*2)*36e5);
+  return out;
+}
+
+/* ---------- persistence ---------- */
+function saveLocal(){ if (S.mode==="local") LS.set("d2d.knocks", S.real); }
+async function addKnock(k){
+  S.real = S.real.concat(k); saveLocal(); render();
+  if (S.mode==="cloud"){
+    try { const { id, ...body } = k; await S.db.collection("knocks").doc(id).set(body); }
+    catch(e){ handleWriteError(e); }
+  }
+}
+async function patchKnock(id, patch){
+  if (usingSample()){ const k = S.sample.find(x=>x.id===id); if (k) Object.assign(k, patch); render(); toast("Sample data isn't saved"); return; }
+  const k = S.real.find(x=>x.id===id); if (!k) return;
+  Object.assign(k, patch); saveLocal(); render();
+  if (S.mode==="cloud"){ try { await S.db.collection("knocks").doc(id).update(patch); } catch(e){ handleWriteError(e); } }
+}
+async function deleteKnock(id){
+  S.real = S.real.filter(x=>x.id!==id); saveLocal(); render();
+  if (S.mode==="cloud"){ try { await S.db.collection("knocks").doc(id).delete(); } catch(e){ handleWriteError(e); } }
+}
+function handleWriteError(e){
+  if (e && e.code==="quota_exceeded") toast("The team log is full. Export and clear old knocks to keep going.");
+  else if (e && (e.code==="invalid_argument"||e.code==="not_granted")) { S.canWrite=false; toast("You have view-only access, so this wasn't saved."); }
+  else toast("Couldn't save to the team log. Check your connection.");
+}
+
+async function initCloud(){
+  if (!window.claude || typeof window.claude.use !== "function") return;
+  let db, user;
+  try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); } catch { return; }
+  if (!db) return;
+  let id = null; try { id = user ? await user.id() : null; } catch {}
+  if (!id) return;
+  S.db = db; S.user = user; S.loadingCloud = true;
+  try { const w = await user.can("data.write"); if (w === false) S.canWrite = false; } catch {}
+  const timer = setTimeout(() => { if (S.loadingCloud){ S.loadingCloud=false; S.db=null; render(); } }, 10000);
+  db.collection("knocks").onSnapshot(snap => {
+    clearTimeout(timer);
+    if (S.mode !== "cloud"){ S.mode = "cloud"; S.me = id; S.sample = buildSample(); }
+    S.loadingCloud = false;
+    S.real = snap.docs.map(d => Object.assign({id:d.id}, d.data()));
+    resolveNames(); render();
+  }, err => { clearTimeout(timer); if (S.mode!=="cloud"){ S.loadingCloud=false; S.db=null; render(); } });
+}
+async function resolveNames(){
+  if (!S.user || typeof S.user.profiles!=="function") return;
+  const ids = [...new Set(S.real.map(k=>k.rep))]; if (!ids.length) return;
+  try {
+    const ps = await S.user.profiles(ids); let changed=false;
+    for (const id of ids){ const p = ps[id]; if (!p) continue;
+      if (p.name && S.names[id]!==p.name){ S.names[id]=p.name; changed=true; }
+      if (p.avatarUrl && S.avatars[id]!==p.avatarUrl){ S.avatars[id]=p.avatarUrl; changed=true; } }
+    if (changed) render();
+  } catch {}
+}
+function repName(id){
+  if (id===S.me) return S.names[id] || S.settings.name || "You";
+  return S.names[id] || "Teammate";
+}
+function avatar(id){
+  const name = repName(id); const ini = name.split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  let h=0; for (const ch of id) h = (h*31 + ch.charCodeAt(0))>>>0;
+  const img = S.avatars[id] ? `<img alt="" src="${esc(S.avatars[id])}">` : esc(ini);
+  return `<span class="av" style="--c:${AV_COLORS[h%AV_COLORS.length]}">${img}</span>`;
+}
+
+/* ---------- derived ---------- */
+function stats(list){
+  const s = {doors:list.length, talks:0, pitches:0, sales:0, revenue:0};
+  for (const k of list){ if (isContact(k.outcome)) s.talks++; if (isPitch(k.outcome)) s.pitches++; if (k.outcome==="sale"){ s.sales++; s.revenue += +k.amount||0; } }
+  return s;
+}
+function latestByAddress(list){
+  const m = new Map();
+  for (const k of list){ const key = addrKey(k.street,k.num); const p = m.get(key); if (!p || k.ts > p.ts) m.set(key, k); }
+  return m;
+}
+function followUps(){
+  return mine().filter(k => k.followAt && !k.followDone).sort((a,b)=>a.followAt-b.followAt);
+}
+
+/* ---------- views ---------- */
+function render(){
+  const mode = $("#mode");
+  mode.className = "mode " + (usingSample() ? "sample" : S.mode);
+  mode.lastElementChild.textContent = S.loadingCloud ? "Connecting…" : usingSample() ? "Sample data" : S.mode==="cloud" ? "Team sync on" : "On this device";
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-current", t.dataset.tab===S.ui.view ? "page" : "false"));
+  const v = $("#view");
+  const fn = {today:viewToday, streets:viewStreets, leads:viewLeads, team:viewTeam}[S.ui.view] || viewToday;
+  const scroll = window.scrollY;
+  v.innerHTML = (usingSample() ? sampleBanner() : "") + fn();
+  window.scrollTo(0, scroll);
+}
+function sampleBanner(){
+  return `<div class="banner"><span><b>You're looking at sample data.</b> Log your first door and the sample disappears.</span><button class="btn sm primary" data-act="log">Log first door</button></div>`;
+}
+
+function viewToday(){
+  const now = Date.now(), t0 = sod(now);
+  const my = mine();
+  const today = my.filter(k => k.ts >= t0);
+  const s = stats(today);
+  const g = S.settings;
+  // 7-day average (previous 7 working days with activity)
+  const prev = []; for (let i=1;i<=7;i++){ const d=t0-i*DAY; const l=my.filter(k=>k.ts>=d&&k.ts<d+DAY); if (l.length) prev.push(stats(l)); }
+  const avg = key => prev.length ? prev.reduce((a,x)=>a+x[key],0)/prev.length : 0;
+  const delta = (v,key,isMoney) => { const a=avg(key); if (!prev.length) return `<div class="d">No history yet</div>`;
+    const diff=v-a; const cls = diff>=0?"up":"down"; const fmt = isMoney?money(Math.abs(diff)):Math.abs(diff).toFixed(diff%1&&Math.abs(diff)<10?1:0);
+    return `<div class="d"><span class="${cls}">${diff>=0?"▲":"▼"} ${fmt}</span> vs 7-day avg</div>`; };
+  const name = repName(S.me);
+  const hr = new Date().getHours();
+  const greet = hr<12?"Good morning":hr<17?"Good afternoon":"Good evening";
+  const dateStr = new Date().toLocaleDateString([], {weekday:"long", month:"long", day:"numeric"});
+  const ringPct = Math.min(1, s.doors/(g.goalDoors||1)); const C = 2*Math.PI*54;
+  const gbar = (label, v, goal, c) => `<div><div class="gbar-top"><b>${label}</b><span class="num">${v} / ${goal}</span></div><div class="track"><span style="width:${Math.min(100,pct(v,goal))}%;--c:${c}"></span></div></div>`;
+
+  // hourly chart
+  const hours = []; for (let h=8; h<=20; h++) hours.push(h);
+  const counts = hours.map(h => today.filter(k => new Date(k.ts).getHours()===h));
+  const maxC = Math.max(4, ...counts.map(c=>c.length));
+  const W=520,H=150,pl=24,pb=20,bw=(W-pl)/hours.length;
+  let bars = "";
+  [0, Math.round(maxC/2), maxC].forEach(v => { const y = H-pb-(v/maxC)*(H-pb-10); bars += `<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-dasharray="${v?"3 4":"0"}"/><text x="${pl-6}" y="${y+3}" text-anchor="end">${v}</text>`; });
+  counts.forEach((c,i) => {
+    const x = pl + i*bw + bw*.18, w = bw*.64; const tot = c.length; const sales = c.filter(k=>k.outcome==="sale").length; const talks = c.filter(k=>isContact(k.outcome)).length;
+    const hT = (tot/maxC)*(H-pb-10), hC = (talks/maxC)*(H-pb-10);
+    if (tot) bars += `<rect x="${x}" y="${H-pb-hT}" width="${w}" height="${hT}" rx="3" fill="var(--accent)" opacity=".28"/>`;
+    if (talks) bars += `<rect x="${x}" y="${H-pb-hC}" width="${w}" height="${hC}" rx="3" fill="var(--accent)"/>`;
+    if (sales) bars += `<circle cx="${x+w/2}" cy="${H-pb-hT-7}" r="3.5" fill="var(--o-sale)"/>`;
+    const h = hours[i]; if (i%2===0) bars += `<text x="${x+w/2}" y="${H-5}" text-anchor="middle">${h>12?h-12:h}${h>=12?"p":"a"}</text>`;
+  });
+
+  const fu = followUps().filter(k => k.followAt < t0 + DAY).slice(0,3);
+  const recent = today.slice().sort((a,b)=>b.ts-a.ts).slice(0,8);
+  const fun = [["Doors",s.doors],["Talked",s.talks],["Pitched",s.pitches],["Closed",s.sales]];
+  const fmax = Math.max(1,s.doors);
+
+  return `
+  <div class="hello"><div class="eyebrow">${esc(dateStr)}</div><h1>${greet}${name==="You"?"":", "+esc(name.split(" ")[0])}</h1><p>${s.doors ? `${s.doors} doors knocked so far. ${g.goalDoors - s.doors > 0 ? (g.goalDoors - s.doors)+" to go for today's goal." : "Daily door goal reached."}` : "No doors logged yet today. Tap Log door when you knock your first one."}</p></div>
+  <div class="grid2">
+    <div class="card"><div class="card-h"><h2>Daily goal</h2><button class="link" data-act="settings">Edit goals</button></div>
+      <div class="goal">
+        <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="none" stroke="var(--surface-2)" stroke-width="11"/><circle cx="60" cy="60" r="54" fill="none" stroke="var(--accent)" stroke-width="11" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-ringPct)}"/></svg>
+          <div class="c"><div><div class="big num">${s.doors}</div><div class="sub">of ${g.goalDoors} doors</div></div></div></div>
+        <div class="bars">${gbar("Conversations", s.talks, g.goalTalks, "var(--o-int)")}${gbar("Sales", s.sales, g.goalSales, "var(--o-sale)")}
+          <div class="muted" style="font-size:13px">Close rate today <b class="num" style="color:var(--ink)">${pct(s.sales,s.talks)}%</b> of conversations</div></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-h"><h2>Today's funnel</h2><span class="eyebrow">conversion</span></div>
+      <div class="funnel">${fun.map(([l,v],i)=>`<div class="fstep"><div class="fb"><span style="height:${Math.max(4,v/fmax*100)}%;opacity:${1-i*.15}"></span></div><div class="fl">${l}</div><div class="fv">${v}</div><div class="fr">${i?pct(v,fun[i-1][1])+"% of prev":"&nbsp;"}</div></div>`).join("")}</div>
+    </div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="eyebrow">Doors</div><div class="v num">${s.doors}</div>${delta(s.doors,"doors")}</div>
+    <div class="kpi"><div class="eyebrow">Conversations</div><div class="v num">${s.talks}</div>${delta(s.talks,"talks")}</div>
+    <div class="kpi"><div class="eyebrow">Sales</div><div class="v num">${s.sales}</div>${delta(s.sales,"sales")}</div>
+    <div class="kpi"><div class="eyebrow">Revenue</div><div class="v num">${money(s.revenue)}</div>${delta(s.revenue,"revenue",true)}</div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-h"><h2>Doors by hour</h2><div class="legend"><span><i style="--c:var(--accent);opacity:.3"></i>Knocked</span><span><i style="--c:var(--accent)"></i>Talked</span><span><i style="--c:var(--o-sale);border-radius:50%"></i>Sale</span></div></div>
+      <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Doors knocked by hour today">${bars}</svg></div>
+    <div class="card"><div class="card-h"><h2>Follow-ups due today</h2><a class="link" href="#leads">See all</a></div>
+      ${fu.length ? `<div class="feed">${fu.map(k=>`<div class="row"><span class="dot" style="--c:${OUT[k.outcome].c}"></span><div class="main"><div class="t1">${esc(k.name||addrLabel(k))}</div><div class="t2">${esc(addrLabel(k))}${k.notes?" · "+esc(k.notes):""}</div></div><span class="when ${k.followAt<Date.now()?"down":""}">${esc(relDay(k.followAt))}</span></div>`).join("")}</div>` : `<div class="empty">Nothing due today. Callbacks you set will show up here.</div>`}
+    </div>
+  </div>
+  <div class="card"><div class="card-h"><h2>Recent doors</h2><span class="muted" style="font-size:13px">tap to open the address</span></div>
+    ${recent.length ? `<div class="feed">${recent.map(k=>`<div class="row"><button class="rowbtn" data-act="house" data-street="${esc(k.street)}" data-num="${k.num}"><span class="dot" style="--c:${OUT[k.outcome].c}"></span><div class="main"><div class="t1">${esc(addrLabel(k))}</div><div class="t2">${OUT[k.outcome].label}${k.name?" · "+esc(k.name):""}${k.outcome==="sale"?" · "+money(k.amount):""}</div></div><span class="when">${fmtTime(k.ts)}</span></button></div>`).join("")}</div>` : `<div class="empty">Your doors from today will list here.</div>`}
+  </div>`;
+}
+
+function viewStreets(){
+  const all = knocks();
+  const latest = latestByAddress(all);
+  const byStreet = new Map();
+  for (const k of all){ const s = k.street.trim(); const key=s.toLowerCase(); if (!byStreet.has(key)) byStreet.set(key, {name:s, list:[]}); byStreet.get(key).list.push(k); }
+  const q = S.ui.streetQ.toLowerCase();
+  const streets = [...byStreet.values()].filter(s => !q || s.name.toLowerCase().includes(q))
+    .map(s => ({...s, last: Math.max(...s.list.map(k=>k.ts))})).sort((a,b)=>b.last-a.last);
+  const legend = OUT_KEYS.map(o=>`<span><i style="--c:${OUT[o].c}"></i>${OUT[o].label}</span>`).join("") + `<span><i class="open"></i>Not knocked</span>`;
+  const now = Date.now();
+  const cards = streets.map(s => {
+    const nums = [...new Set(s.list.map(k=>k.num))];
+    const sides = [nums.filter(n=>n%2), nums.filter(n=>!(n%2))].map(arr => {
+      if (!arr.length) return null;
+      const lo = Math.min(...arr), hi = Math.max(...arr); const tiles=[];
+      for (let n=lo; n<=hi && tiles.length<80; n+=2){
+        const k = latest.get(addrKey(s.name,n));
+        if (!k){ tiles.push(`<button class="house open" data-act="log-at" data-street="${esc(s.name)}" data-num="${n}" title="${n} ${esc(s.name)}: not knocked">${n}</button>`); continue; }
+        const due = k.followAt && !k.followDone ? " due" : "";
+        tiles.push(`<button class="house${due}" style="--c:${OUT[k.outcome].c}" data-act="house" data-street="${esc(s.name)}" data-num="${n}" title="${n} ${esc(s.name)}: ${OUT[k.outcome].label}">${n}</button>`);
+      }
+      return tiles.join("");
+    });
+    const st = stats([...latest.values()].filter(k=>k.street.trim().toLowerCase()===s.name.toLowerCase()));
+    const retry = [...latest.values()].filter(k=>k.street.trim().toLowerCase()===s.name.toLowerCase() && k.outcome==="nh");
+    const firstRetry = retry.sort((a,b)=>a.num-b.num)[0];
+    return `<div class="card street">
+      <div class="street-h"><div><h3>${esc(s.name)}</h3><div class="street-stats"><span><b>${st.doors}</b> addresses</span><span><b>${st.sales}</b> sold</span><span><b>${retry.length}</b> not home</span><span>last ${ago(s.last)}</span></div></div>
+      ${firstRetry ? `<button class="btn sm" data-act="log-at" data-street="${esc(s.name)}" data-num="${firstRetry.num}">${icon('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',16)}Retry not-homes</button>` : ""}</div>
+      ${sides[0] ? `<div class="side"><div class="side-l">Odd side</div><div class="houses">${sides[0]}</div></div>` : ""}
+      ${sides[0] && sides[1] ? `<div class="road" aria-hidden="true"></div>` : ""}
+      ${sides[1] ? `<div class="side"><div class="side-l">Even side</div><div class="houses">${sides[1]}</div></div>` : ""}
+    </div>`;
+  }).join("");
+  return `
+  <div><h1 style="font-size:28px">Streets</h1><p class="muted" style="margin:4px 0 0">Every house your team has knocked, laid out by side of the street. Tap a house for its history, or a dashed one to log it.</p></div>
+  <div class="toolbar"><label class="search">${icon('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')}<input id="streetQ" type="search" placeholder="Find a street" value="${esc(S.ui.streetQ)}" aria-label="Find a street"></label></div>
+  <div class="legend">${legend}<span><i style="--c:var(--o-cb);border-radius:50%"></i>Follow-up due</span></div>
+  ${cards || `<div class="card empty">${q ? "No street matches that search." : "No streets yet. Log a door and its street appears here."}</div>`}`;
+}
+
+function viewLeads(){
+  const tab = S.ui.leadsTab;
+  const seg = `<div class="seg" role="group" aria-label="Lead view"><button data-act="leads-tab" data-v="due" aria-pressed="${tab==="due"}">Follow-ups</button><button data-act="leads-tab" data-v="pipe" aria-pressed="${tab==="pipe"}">Pipeline</button></div>`;
+  const now = Date.now(), t0 = sod(now);
+  const card = (k, showDue) => {
+    let dueCls = "", dueTxt = "";
+    if (showDue && k.followAt){ dueCls = k.followAt < now ? "over" : k.followAt < t0+DAY ? "today" : ""; dueTxt = (k.followAt<now?"Overdue · ":"") + relDay(k.followAt); }
+    return `<div class="lead">
+      <div class="lead-top"><span class="dot" style="--c:${OUT[k.outcome].c};margin-top:6px"></span><div class="main"><div class="lead-name">${esc(k.name || "No name")}</div><div class="lead-addr"><span>${esc(addrLabel(k))}</span>${pill(k.outcome)}<span>${ago(k.ts)}</span></div></div>${dueTxt?`<span class="lead-due ${dueCls}">${esc(dueTxt)}</span>`:""}</div>
+      ${k.notes ? `<div class="lead-note">${esc(k.notes)}</div>` : ""}
+      ${(k.phone||k.email||k.outcome==="sale") ? `<div class="lead-meta">${k.phone?`<span>Phone <span class="mono">${esc(k.phone)}</span></span>`:""}${k.email?`<span>Email <span class="mono">${esc(k.email)}</span></span>`:""}${k.outcome==="sale"?`<span>${esc(k.product||"Sale")} <b class="mono" style="color:var(--o-sale)">${money(k.amount)}</b></span>`:""}</div>` : ""}
+      <div class="lead-acts">
+        ${showDue ? `<button class="btn sm primary" data-act="fu-done" data-id="${k.id}">${icon('<path d="m5 12 5 5 9-10"/>',16)}Done</button><button class="btn sm" data-act="fu-snooze" data-id="${k.id}">Tomorrow</button>` : ""}
+        <button class="btn sm" data-act="log-at" data-street="${esc(k.street)}" data-num="${k.num}">Log visit</button>
+        ${k.phone ? `<button class="btn sm" data-act="copy" data-text="${esc(k.phone)}">Copy phone</button>` : ""}
+      </div></div>`;
+  };
+  let body = "";
+  if (tab==="due"){
+    const list = followUps();
+    const groups = [["Overdue", list.filter(k=>k.followAt<now)], ["Today", list.filter(k=>k.followAt>=now && k.followAt<t0+DAY)], ["Upcoming", list.filter(k=>k.followAt>=t0+DAY)]];
+    body = groups.filter(g=>g[1].length).map(([h,l]) => `<div class="card"><div class="group-h"><h2 style="font-size:17px">${h}</h2><span class="n">${l.length}</span></div>${l.map(k=>card(k,true)).join("")}</div>`).join("")
+      || `<div class="card empty">You're all caught up. When you log a Callback or Interested door with a follow-up time, it lands here.</div>`;
+  } else {
+    const latest = [...latestByAddress(mine()).values()].filter(k=>isPitch(k.outcome));
+    const f = S.ui.leadsFilter, q = S.ui.q.toLowerCase();
+    const list = latest.filter(k => (f==="all"||k.outcome===f) && (!q || (k.name+" "+k.street+" "+k.num+" "+k.phone+" "+k.notes).toLowerCase().includes(q))).sort((a,b)=>b.ts-a.ts);
+    const cnt = o => latest.filter(k=>o==="all"||k.outcome===o).length;
+    const chips = [["all","All"],["int","Interested"],["cb","Callback"],["sale","Sold"]].map(([v,l])=>`<button class="chip" data-act="leads-filter" data-v="${v}" aria-pressed="${f===v}">${l} <span class="num">${cnt(v)}</span></button>`).join("");
+    const value = latest.filter(k=>k.outcome==="sale").reduce((a,k)=>a+(+k.amount||0),0);
+    body = `<div class="toolbar"><label class="search">${icon('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')}<input id="leadQ" type="search" placeholder="Search name, address, phone, notes" value="${esc(S.ui.q)}" aria-label="Search leads"></label></div>
+      <div class="chips">${chips}</div>
+      <div class="card"><div class="card-h"><h2>${list.length} ${list.length===1?"lead":"leads"}</h2><span class="muted" style="font-size:13px">Sold value <b class="num" style="color:var(--ink)">${money(value)}</b></span></div>
+      ${list.length ? list.slice(0,100).map(k=>card(k,!!(k.followAt&&!k.followDone))).join("") : `<div class="empty">No leads match.</div>`}</div>`;
+  }
+  return `<div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:space-between"><div><h1 style="font-size:28px">Follow-ups</h1><p class="muted" style="margin:4px 0 0">Your callbacks, interested homeowners and closed deals.</p></div>${seg}</div>${body}`;
+}
+
+function viewTeam(){
+  const per = S.ui.teamPeriod, met = S.ui.teamMetric;
+  const from = per==="today" ? sod() : per==="week" ? sow() : som();
+  const list = knocks().filter(k=>k.ts>=from);
+  const reps = new Map();
+  for (const k of knocks()) if (!reps.has(k.rep)) reps.set(k.rep, []);
+  if (!reps.has(S.me)) reps.set(S.me, []);
+  for (const k of list) reps.get(k.rep).push(k);
+  const rows = [...reps.entries()].map(([id,l]) => ({id, ...stats(l)}));
+  const val = r => met==="sales" ? r.sales : met==="doors" ? r.doors : r.revenue;
+  rows.sort((a,b)=>val(b)-val(a) || b.doors-a.doors);
+  const max = Math.max(1, ...rows.map(val));
+  const team = stats(list);
+  const perLabel = {today:"today", week:"this week", month:"this month"}[per];
+  const board = rows.map((r,i)=>`<div class="rank${r.id===S.me?" me":""}"><span class="pos${i===0&&val(r)>0?" p1":""}">${i+1}</span>${avatar(r.id)}<div style="min-width:0"><div class="nm">${esc(repName(r.id))}${r.id===S.me?' <span class="muted" style="font-weight:500">(you)</span>':""}</div><div class="bar"><span style="width:${val(r)/max*100}%"></span></div></div>
+    <div class="val">${met==="revenue"?money(r.revenue):val(r)}<small>${met==="doors"?`${pct(r.talks,r.doors)}% talk rate`:`${pct(r.sales,r.talks)}% close`}</small></div></div>`).join("");
+
+  // 14-day team trend
+  const t0 = sod(); const days=[]; for (let i=13;i>=0;i--){ const d=t0-i*DAY; const l=knocks().filter(k=>k.ts>=d&&k.ts<d+DAY); days.push({d, ...stats(l)}); }
+  const W=560,H=170,pl=28,pb=22; const mD0 = Math.max(10,...days.map(x=>x.doors)); const mD = Math.ceil(mD0/(mD0>100?50:10))*(mD0>100?50:10); const mS = Math.max(3,...days.map(x=>x.sales));
+  const bw=(W-pl)/days.length; let svg="";
+  [0,.5,1].forEach(f=>{ const y=H-pb-f*(H-pb-14); svg+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-dasharray="${f?"3 4":"0"}"/><text x="${pl-6}" y="${y+3}" text-anchor="end">${Math.round(mD*f)}</text>`; });
+  const pts=[];
+  days.forEach((x,i)=>{ const bx=pl+i*bw+bw*.2, w=bw*.6, h=x.doors/mD*(H-pb-14); svg+=`<rect x="${bx}" y="${H-pb-h}" width="${w}" height="${h}" rx="3" fill="var(--accent)" opacity="${i===13?1:.35}"/>`;
+    pts.push([bx+w/2, H-pb-(x.sales/mS)*(H-pb-14)]);
+    if (i%2===1||i===13) svg+=`<text x="${bx+w/2}" y="${H-6}" text-anchor="middle">${new Date(x.d).toLocaleDateString([], {month:"numeric",day:"numeric"})}</text>`; });
+  svg += `<polyline points="${pts.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--o-sale)" stroke-width="2.2" stroke-linejoin="round"/>` + pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i===13?4.5:3}" fill="var(--o-sale)" stroke="var(--surface)" stroke-width="1.5"/>`).join("");
+
+  const segP = ["today","week","month"].map(v=>`<button data-act="team-period" data-v="${v}" aria-pressed="${per===v}">${v==="today"?"Today":v==="week"?"Week":"Month"}</button>`).join("");
+  const segM = [["sales","Sales"],["revenue","Revenue"],["doors","Doors"]].map(([v,l])=>`<button data-act="team-metric" data-v="${v}" aria-pressed="${met===v}">${l}</button>`).join("");
+  return `
+  <div><h1 style="font-size:28px">Team</h1><p class="muted" style="margin:4px 0 0">${S.mode==="cloud" ? "Everyone who logs doors in this app shows up here." : "Leaderboard for everyone logging in this app."}</p></div>
+  <div class="toolbar"><div class="seg" role="group" aria-label="Period">${segP}</div><div class="seg" role="group" aria-label="Rank by">${segM}</div></div>
+  <div class="kpis">
+    <div class="kpi"><div class="eyebrow">Team doors</div><div class="v num">${team.doors}</div><div class="d">${perLabel}</div></div>
+    <div class="kpi"><div class="eyebrow">Conversations</div><div class="v num">${team.talks}</div><div class="d">${pct(team.talks,team.doors)}% of doors</div></div>
+    <div class="kpi"><div class="eyebrow">Sales</div><div class="v num">${team.sales}</div><div class="d">${pct(team.sales,team.talks)}% close rate</div></div>
+    <div class="kpi"><div class="eyebrow">Revenue</div><div class="v num">${money(team.revenue)}</div><div class="d">${team.sales?money(team.revenue/team.sales)+" avg deal":"no deals yet"}</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-h"><h2>Leaderboard</h2><span class="eyebrow">${perLabel}</span></div><div class="board">${board}</div></div>
+    <div class="card"><div class="card-h"><h2>Last 14 days</h2><div class="legend"><span><i style="--c:var(--accent)"></i>Doors</span><span><i style="--c:var(--o-sale);border-radius:50%"></i>Sales (right scale ${mS})</span></div></div>
+      <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Team doors and sales per day for the last 14 days">${svg}</svg></div>
+  </div>`;
+}
+
+/* ---------- sheets ---------- */
+let sheetCtx = null;
+function openSheet(html, ctx){
+  const sh = $("#sheet"), sc = $("#scrim");
+  sh.innerHTML = html; sheetCtx = ctx || {};
+  sh.hidden = false; sc.hidden = false;
+  requestAnimationFrame(()=>{ sh.classList.add("on"); sc.classList.add("on"); });
+}
+function closeSheet(){
+  const sh = $("#sheet"), sc = $("#scrim");
+  sh.classList.remove("on"); sc.classList.remove("on");
+  setTimeout(()=>{ sh.hidden = true; sc.hidden = true; sh.innerHTML=""; }, 220);
+  sheetCtx = null;
+}
+
+function lastStreet(){ const m = mine().slice().sort((a,b)=>b.ts-a.ts)[0]; return m ? {street:m.street, num:m.num+2} : {street:"", num:""}; }
+function openLog(pre){
+  if (S.mode==="cloud" && !S.canWrite){ toast("You have view-only access to this team log."); return; }
+  const p = pre || lastStreet();
+  const streets = [...new Set(knocks().map(k=>k.street.trim()))].sort();
+  const prods = S.settings.products;
+  const quick = [["tom","Tomorrow 10 AM"],["tom5","Tomorrow 5 PM"],["d2","In 2 days"],["wk","Next week"],["custom","Pick time"]];
+  openSheet(`
+    <div class="sheet-h"><h2 id="sheetTitle">Log a door</h2><button class="icon-btn" data-act="close" aria-label="Close">${icon('<path d="M6 6l12 12M18 6 6 18"/>',20)}</button></div>
+    <form class="sheet-b" id="logForm" novalidate>
+      <div class="field"><span class="flabel">Address</span>
+        <div class="addr">
+          <div class="stepper"><button type="button" data-act="num-step" data-d="-2" aria-label="Previous house on this side">−</button><input id="fNum" inputmode="numeric" pattern="[0-9]*" value="${esc(p.num)}" placeholder="#" aria-label="House number"><button type="button" data-act="num-step" data-d="2" aria-label="Next house on this side">+</button></div>
+          <input class="inp" id="fStreet" list="streetList" value="${esc(p.street)}" placeholder="Street name" aria-label="Street" autocomplete="off">
+          <datalist id="streetList">${streets.map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+        </div>
+      </div>
+      <div id="prior"></div>
+      <div class="field"><span class="flabel">What happened?</span>
+        <div class="outs" role="group" aria-label="Outcome">${OUT_KEYS.map(o=>`<button type="button" class="out" style="--c:${OUT[o].c}" data-act="pick-out" data-v="${o}" aria-pressed="false">${icon(OUT[o].icon)}${OUT[o].label}</button>`).join("")}</div>
+      </div>
+      <div id="secContact" hidden class="field" style="gap:10px">
+        <div class="field"><label for="fName">Homeowner name</label><input class="inp" id="fName" autocomplete="off" placeholder="Optional"></div>
+        <div class="two"><div class="field"><label for="fPhone">Phone</label><input class="inp" id="fPhone" type="tel" placeholder="Optional"></div><div class="field"><label for="fEmail">Email</label><input class="inp" id="fEmail" type="email" placeholder="Optional"></div></div>
+      </div>
+      <div id="secFollow" hidden class="field"><span class="flabel">Follow up</span>
+        <div class="chips">${quick.map(([v,l])=>`<button type="button" class="chip" data-act="pick-fu" data-v="${v}" aria-pressed="${v==="tom"}">${l}</button>`).join("")}</div>
+        <input class="inp" id="fFollow" type="datetime-local" hidden aria-label="Follow-up date and time">
+      </div>
+      <div id="secSale" hidden class="two">
+        <div class="field"><label for="fProduct">Product</label><select class="inp" id="fProduct">${prods.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("")}<option value="other">Other</option></select></div>
+        <div class="field"><label for="fAmount">Amount ($)</label><input class="inp num" id="fAmount" inputmode="decimal" value="${prods[0]?prods[0].price:""}"></div>
+      </div>
+      <div class="field"><label for="fNotes">Notes</label><textarea class="inp" id="fNotes" placeholder="Gate code, best time, objections…"></textarea></div>
+      <div class="err" id="fErr" role="alert"></div>
+    </form>
+    <div class="sheet-f"><button class="btn" data-act="save" data-next="0">Save</button><button class="btn primary" data-act="save" data-next="1">Save & next door ${icon('<path d="M5 12h14M13 6l6 6-6 6"/>',16)}</button></div>`,
+    {kind:"log", outcome:null, fu:"tom"});
+  showPrior();
+  if (pre && pre.outcome) pickOutcome(pre.outcome);
+  setTimeout(()=>{ const el = p.street ? null : $("#fStreet"); if (el) el.focus(); }, 260);
+}
+function showPrior(){
+  const el = $("#prior"); if (!el) return;
+  const street = $("#fStreet").value.trim(), num = parseInt($("#fNum").value,10);
+  if (!street || !num){ el.innerHTML=""; return; }
+  const hist = knocks().filter(k=>addrKey(k.street,k.num)===addrKey(street,num)).sort((a,b)=>b.ts-a.ts);
+  if (!hist.length){ el.innerHTML = `<div class="prior muted">${icon('<path d="M12 5v14M5 12h14"/>',16)}First visit to this address.</div>`; return; }
+  const k = hist[0];
+  el.innerHTML = `<div class="prior"><span class="dot" style="--c:${OUT[k.outcome].c}"></span><span>Knocked ${hist.length} ${hist.length===1?"time":"times"}. Last: <b>${OUT[k.outcome].label}</b> ${ago(k.ts)}${k.name?" · "+esc(k.name):""}${k.notes?` · <span class="muted">${esc(k.notes)}</span>`:""}</span></div>`;
+  if (k.outcome==="dnk") el.firstElementChild.style.background="var(--bad-bg)";
+}
+function pickOutcome(o){
+  sheetCtx.outcome = o;
+  document.querySelectorAll(".out").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===o));
+  $("#secContact").hidden = !(isContact(o));
+  $("#secFollow").hidden = !(o==="cb"||o==="int");
+  $("#secSale").hidden = o!=="sale";
+  $("#fErr").textContent = "";
+}
+function followTime(){
+  const v = sheetCtx.fu, t0 = sod();
+  if (v==="tom") return t0 + DAY + 10*36e5;
+  if (v==="tom5") return t0 + DAY + 17*36e5;
+  if (v==="d2") return t0 + 2*DAY + 10*36e5;
+  if (v==="wk") return t0 + 7*DAY + 10*36e5;
+  const x = $("#fFollow").value; return x ? new Date(x).getTime() : null;
+}
+function saveLog(next){
+  const street = $("#fStreet").value.trim().replace(/\s+/g," ");
+  const num = parseInt($("#fNum").value,10);
+  const o = sheetCtx.outcome;
+  const err = !num ? "Enter the house number." : !street ? "Enter the street name." : !o ? "Pick what happened at the door." : (o==="cb"||o==="int") && sheetCtx.fu==="custom" && !$("#fFollow").value ? "Pick a follow-up time." : "";
+  if (err){ $("#fErr").textContent = err; return; }
+  // match existing street spelling
+  const known = [...new Set(knocks().map(k=>k.street.trim()))].find(s=>s.toLowerCase()===street.toLowerCase());
+  const k = {id:uid(), ts:Date.now(), rep:S.me, street: known||street, num, outcome:o,
+    name: isContact(o) ? $("#fName").value.trim() : "", phone: isContact(o) ? $("#fPhone").value.trim() : "", email: isContact(o) ? $("#fEmail").value.trim() : "",
+    notes: $("#fNotes").value.trim(), followAt: (o==="cb"||o==="int") ? followTime() : null, followDone:false, product:"", amount:0};
+  if (o==="sale"){ const pi=$("#fProduct").value; k.product = pi==="other" ? "Other" : (S.settings.products[pi]||{}).name || ""; k.amount = parseFloat($("#fAmount").value)||0; }
+  // close earlier open follow-ups at this address when we revisit
+  const open = knocks().filter(x=>x.rep===S.me && addrKey(x.street,x.num)===addrKey(k.street,k.num) && x.followAt && !x.followDone);
+  const wasSample = usingSample();
+  addKnock(k);
+  if (!wasSample) open.forEach(x=>patchKnock(x.id,{followDone:true}));
+  const msg = o==="sale" ? `Sale logged at ${addrLabel(k)}. Nice work.` : `${OUT[o].label} logged at ${addrLabel(k)}`;
+  if (next){
+    const nn = num + 2;
+    $("#fNum").value = nn; $("#fName").value=""; $("#fPhone").value=""; $("#fEmail").value=""; $("#fNotes").value="";
+    sheetCtx.outcome=null; document.querySelectorAll(".out").forEach(b=>b.setAttribute("aria-pressed","false"));
+    ["#secContact","#secFollow","#secSale"].forEach(s=>$(s).hidden=true);
+    showPrior(); toast(msg + `. Next: ${nn}`);
+    $("#sheet .sheet-b").scrollTop = 0;
+  } else { closeSheet(); toast(wasSample ? "Saved. Sample data cleared, this is your real log now." : msg); }
+}
+
+function openHouse(street, num){
+  const hist = knocks().filter(k=>addrKey(k.street,k.num)===addrKey(street,num)).sort((a,b)=>b.ts-a.ts);
+  const rows = hist.map(k=>`<div class="row" style="align-items:flex-start"><span class="dot" style="--c:${OUT[k.outcome].c};margin-top:6px"></span><div class="main"><div class="t1" style="white-space:normal">${OUT[k.outcome].label}${k.outcome==="sale"?" · "+money(k.amount):""}</div><div class="t2" style="white-space:normal">${esc(relDay(k.ts))} · ${esc(repName(k.rep))}${k.name?" · "+esc(k.name):""}${k.phone?" · "+esc(k.phone):""}</div>${k.notes?`<div class="lead-note" style="margin-top:6px">${esc(k.notes)}</div>`:""}</div>
+    ${k.rep===S.me && !usingSample() ? `<button class="btn sm danger" data-act="del-ask" data-id="${k.id}" aria-label="Delete this entry">${icon('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',15)}</button>` : ""}</div>
+    <div class="confirm" id="del-${k.id}" hidden><span>Delete this ${OUT[k.outcome].label.toLowerCase()} entry from ${esc(relDay(k.ts))}? This can't be undone.</span><div style="display:flex;gap:8px"><button class="btn sm danger" data-act="del" data-id="${k.id}">Delete</button><button class="btn sm" data-act="del-cancel" data-id="${k.id}">Keep it</button></div></div>`).join("");
+  openSheet(`
+    <div class="sheet-h"><h2 id="sheetTitle"><span class="num">${num}</span> ${esc(street)}</h2><button class="icon-btn" data-act="close" aria-label="Close">${icon('<path d="M6 6l12 12M18 6 6 18"/>',20)}</button></div>
+    <div class="sheet-b">${hist.length ? `<div class="eyebrow">${hist.length} ${hist.length===1?"visit":"visits"}</div><div class="hist feed">${rows}</div>` : `<div class="empty">No visits logged here yet.</div>`}</div>
+    <div class="sheet-f"><button class="btn primary" data-act="log-at" data-street="${esc(street)}" data-num="${num}">Log a visit here</button></div>`, {kind:"house"});
+}
+
+function openSettings(){
+  const s = S.settings;
+  const cloud = S.mode==="cloud";
+  openSheet(`
+    <div class="sheet-h"><h2 id="sheetTitle">Settings</h2><button class="icon-btn" data-act="close" aria-label="Close">${icon('<path d="M6 6l12 12M18 6 6 18"/>',20)}</button></div>
+    <div class="sheet-b">
+      ${cloud ? `<div class="prior">${icon('<path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 12 3.5 3.5 0 0 0 6 19z"/>',18)}<span>Team sync is on. Your doors save to the shared team log under your claude.ai account.</span></div>`
+        : `<div class="field"><label for="sName">Your name</label><input class="inp" id="sName" value="${esc(s.name)}" placeholder="Shown on the leaderboard"></div>
+           <div class="prior muted">${icon('<path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/>',18)}<span>Data is saved in this browser only. Open the app from its claude.ai link while signed in to turn on team sync.</span></div>`}
+      <div class="field"><span class="flabel">Daily goals</span>
+        <div class="two" style="grid-template-columns:repeat(3,1fr)"><div class="field"><label for="gD">Doors</label><input class="inp num" id="gD" inputmode="numeric" value="${s.goalDoors}"></div><div class="field"><label for="gT">Talks</label><input class="inp num" id="gT" inputmode="numeric" value="${s.goalTalks}"></div><div class="field"><label for="gS">Sales</label><input class="inp num" id="gS" inputmode="numeric" value="${s.goalSales}"></div></div></div>
+      <div class="field"><label for="sProds">Products, one per line as name, price</label><textarea class="inp mono" id="sProds" rows="4">${esc(s.products.map(p=>p.name+", "+p.price).join("\n"))}</textarea></div>
+      <div class="field"><span class="flabel">Your data</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="export">${icon('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',16)}Export my doors (CSV)</button>
+        ${!cloud && S.real.length ? `<button class="btn danger" data-act="wipe-ask">Delete all my doors</button>` : ""}</div>
+        <div class="confirm" id="wipeBox" hidden><span>Delete all ${S.real.length} doors saved in this browser? This can't be undone. Export first if you need a copy.</span><div style="display:flex;gap:8px"><button class="btn sm danger" data-act="wipe">Delete everything</button><button class="btn sm" data-act="wipe-cancel">Keep my data</button></div></div>
+        <textarea class="inp mono" id="csvOut" rows="5" hidden aria-label="CSV export" readonly></textarea>
+      </div>
+    </div>
+    <div class="sheet-f"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="save-settings">Save settings</button></div>`, {kind:"settings"});
+}
+function saveSettings(){
+  const s = S.settings; const n = id => Math.max(1, parseInt($(id).value,10)||1);
+  if ($("#sName")) s.name = $("#sName").value.trim();
+  s.goalDoors = n("#gD"); s.goalTalks = n("#gT"); s.goalSales = n("#gS");
+  const prods = $("#sProds").value.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const m=l.match(/^(.*?)[,\t]\s*\$?([\d.]+)\s*$/); return m ? {name:m[1].trim(), price:parseFloat(m[2])} : {name:l, price:0}; });
+  if (prods.length) s.products = prods;
+  LS.set("d2d.settings", s); closeSheet(); render(); toast("Settings saved");
+}
+function csv(){
+  const rows = [["date","time","rep","house_number","street","outcome","name","phone","email","follow_up","follow_up_done","product","amount","notes"]];
+  for (const k of mine().slice().sort((a,b)=>a.ts-b.ts)){
+    const d = new Date(k.ts);
+    rows.push([d.toLocaleDateString("en-CA"), d.toTimeString().slice(0,5), repName(k.rep), k.num, k.street, OUT[k.outcome].label, k.name, k.phone, k.email, k.followAt?new Date(k.followAt).toISOString():"", k.followDone?"yes":"", k.product, k.amount||"", k.notes]);
+  }
+  return rows.map(r=>r.map(v=>{ v=String(v??""); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }).join(",")).join("\n");
+}
+async function exportCsv(){
+  const data = csv(); const filename = "doorline-" + new Date().toLocaleDateString("en-CA") + ".csv";
+  let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch {}
+  if (dl){ try { await dl.save({filename, data}); toast("Export ready"); return; } catch(e){ if (e && e.code==="cancelled") return; } }
+  const ta = $("#csvOut"); if (!ta) return; ta.hidden = false; ta.value = data; ta.focus(); ta.select();
+  try { await navigator.clipboard.writeText(data); toast("CSV copied to clipboard"); } catch { toast("Select the text below and copy it"); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const a = b.dataset.act;
+  switch(a){
+    case "log": openLog(); break;
+    case "log-at": { const go = () => openLog({street:b.dataset.street, num:+b.dataset.num}); if (sheetCtx){ closeSheet(); setTimeout(go, 230); } else go(); break; }
+    case "house": openHouse(b.dataset.street, +b.dataset.num); break;
+    case "settings": openSettings(); break;
+    case "close": closeSheet(); break;
+    case "pick-out": pickOutcome(b.dataset.v); break;
+    case "pick-fu": sheetCtx.fu = b.dataset.v; document.querySelectorAll("[data-act=pick-fu]").forEach(x=>x.setAttribute("aria-pressed", x===b)); $("#fFollow").hidden = b.dataset.v!=="custom"; break;
+    case "num-step": { const i=$("#fNum"); const v=(parseInt(i.value,10)||0)+ +b.dataset.d; i.value = Math.max(1,v); showPrior(); break; }
+    case "save": saveLog(b.dataset.next==="1"); break;
+    case "save-settings": saveSettings(); break;
+    case "export": exportCsv(); break;
+    case "wipe-ask": $("#wipeBox").hidden=false; break;
+    case "wipe-cancel": $("#wipeBox").hidden=true; break;
+    case "wipe": S.real=[]; LS.set("d2d.knocks",[]); closeSheet(); render(); toast("All doors deleted"); break;
+    case "del-ask": $("#del-"+b.dataset.id).hidden=false; break;
+    case "del-cancel": $("#del-"+b.dataset.id).hidden=true; break;
+    case "del": { deleteKnock(b.dataset.id); closeSheet(); toast("Entry deleted"); break; }
+    case "fu-done": patchKnock(b.dataset.id,{followDone:true}); if (!usingSample()) toast("Follow-up done"); break;
+    case "fu-snooze": patchKnock(b.dataset.id,{followAt: sod()+DAY+10*36e5}); if (!usingSample()) toast("Moved to tomorrow 10 AM"); break;
+    case "copy": { const t=b.dataset.text; navigator.clipboard?.writeText(t).then(()=>toast("Copied "+t), ()=>toast(t)); break; }
+    case "leads-tab": S.ui.leadsTab=b.dataset.v; render(); break;
+    case "leads-filter": S.ui.leadsFilter=b.dataset.v; render(); break;
+    case "team-period": S.ui.teamPeriod=b.dataset.v; render(); break;
+    case "team-metric": S.ui.teamMetric=b.dataset.v; render(); break;
+  }
+});
+$("#scrim").addEventListener("click", closeSheet);
+document.addEventListener("keydown", e => { if (e.key==="Escape" && sheetCtx) closeSheet(); });
+document.addEventListener("input", e => {
+  if (e.target.id==="leadQ"){ S.ui.q=e.target.value; keepFocus("leadQ"); }
+  if (e.target.id==="streetQ"){ S.ui.streetQ=e.target.value; keepFocus("streetQ"); }
+  if (e.target.id==="fStreet"||e.target.id==="fNum") showPrior();
+  if (e.target.id==="fProduct"){ const p=S.settings.products[e.target.value]; if (p) $("#fAmount").value=p.price; }
+});
+document.addEventListener("change", e => { if (e.target.id==="fProduct"){ const p=S.settings.products[e.target.value]; if (p) $("#fAmount").value=p.price; } });
+function keepFocus(id){ const pos = $("#"+id).selectionStart; render(); const el=$("#"+id); if (el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch{} } }
+document.addEventListener("submit", e => e.preventDefault());
+
+function route(){
+  const h = location.hash.replace("#","");
+  S.ui.view = ["today","streets","leads","team"].includes(h) ? h : "today";
+  if (sheetCtx) closeSheet();
+  render(); window.scrollTo(0,0);
+}
+window.addEventListener("hashchange", route);
+
+/* ---------- boot ---------- */
+S.sample = buildSample();
+route();
+initCloud();
+setInterval(()=>{ if (!sheetCtx && S.ui.view==="today") render(); }, 60000);
+})();
+</script>
